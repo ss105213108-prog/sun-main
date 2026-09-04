@@ -1,0 +1,61 @@
+﻿# 依賴套件
+node_modules/
+.pnpm-store/
+
+# 建置輸出
+dist/
+build/
+supabase/.branches/
+supabase/.temp/
+
+# 日誌與暫存
+*.log
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+.phase2-baseline/
+.cache/
+.tmp/
+tmp/
+temp/
+coverage/
+.vite/
+*.tmp
+*.temp
+*.bak
+*.orig
+*~
+
+# 本機環境變數與後端金鑰
+.env
+.env.*
+!.env.example
+
+# 一次性憑證頁、測試帳密與私鑰
+.credentials/
+credentials/
+credential-pages/
+*credential*.html
+*credentials*.json
+test-credentials*
+auth-test-credentials*
+one-time-credentials*
+*.pem
+*.key
+*.p12
+*.pfx
+
+# 作業系統暫存檔
+.DS_Store
+Thumbs.db
+desktop.ini
+$RECYCLE.BIN/
+
+# 編輯器設定
+.vscode/
+.idea/
+.vs/
+*.swp
+*.swo
+*.suo
+*.user

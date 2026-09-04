@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>《太陽之心：法老的試煉》 - 2D劇情解謎冒險</title>
+  <link rel="stylesheet" href="css/style.css">
+  <script>
+    // 偵錯日誌收集：過濾瀏覽器擴充功能觸發的 Script error，僅在真正的腳本例外時提示
+    window.addEventListener('error', function(e) {
+      if (!e.filename && (e.message === 'Script error.' || e.message === 'Script error')) {
+        return; // 忽略瀏覽器擴充功能跨域的無害警告
+      }
+      var debugPanel = document.getElementById('debug-error-panel');
+      if (!debugPanel) {
+        debugPanel = document.createElement('div');
+        debugPanel.id = 'debug-error-panel';
+        debugPanel.style.position = 'absolute';
+        debugPanel.style.top = '10px';
+        debugPanel.style.left = '10px';
+        debugPanel.style.background = 'rgba(200, 0, 0, 0.95)';
+        debugPanel.style.color = 'white';
+        debugPanel.style.padding = '15px';
+        debugPanel.style.borderRadius = '5px';
+        debugPanel.style.fontFamily = 'monospace';
+        debugPanel.style.fontSize = '12px';
+        debugPanel.style.zIndex = '99999';
+        debugPanel.style.maxWidth = '90%';
+        debugPanel.style.pointerEvents = 'auto';
+        debugPanel.style.whiteSpace = 'pre-wrap';
+        document.body.appendChild(debugPanel);
+      }
+      debugPanel.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">' +
+                             '<strong>⚠️ 遊戲偵錯：JavaScript 錯誤警告</strong>' +
+                             '<button onclick="this.parentNode.parentNode.remove()" style="background:#440000;color:white;border:1px solid #ff6666;padding:2px 6px;cursor:pointer;border-radius:3px;">✖ 關閉</button>' +
+                             '</div>' + 
+                             '錯誤訊息: ' + e.message + '\n' +
+                             '檔案路徑: ' + (e.filename || '未知檔案') + '\n' +
+                             '行號/列號: ' + e.lineno + ':' + e.colno;
+    });
+  </script>
+</head>
+<body>
+  <div id="game-container">
+    <!-- 網站入口：只負責登入／訪客分流，通過後顯示既有主選單。 -->
+    <section id="explorer-gate" class="explorer-gate" role="dialog" aria-modal="true" aria-labelledby="explorer-gate-title" aria-describedby="explorer-gate-subtitle">
+      <div class="explorer-gate-vignette" aria-hidden="true"></div>
+      <div class="explorer-login-tablet">
+        <div class="explorer-gate-mark" aria-hidden="true">𓂀</div>
+        <header class="explorer-gate-heading">
+          <p>法老王陵墓・探勘許可</p>
+          <h1 id="explorer-gate-title">探勘者登錄</h1>
+          <p id="explorer-gate-subtitle">登入後可保留你的探勘紀錄。</p>
+        </header>
+
+        <form id="explorer-login-form" class="explorer-login-form" novalidate>
+          <label for="explorer-account">電子信箱</label>
+          <input id="explorer-account" name="account" type="email" autocomplete="email" inputmode="email" required>
+
+          <label for="explorer-password">密碼</label>
+          <input id="explorer-password" name="password" type="password" autocomplete="current-password" required>
+
+          <button id="explorer-login-submit" class="explorer-primary-action" type="submit">載入探勘紀錄</button>
+        </form>
+
+        <button id="explorer-forgot-password" class="explorer-text-action" type="button">忘記密碼？</button>
+        <p class="explorer-register-row">
+          <span>尚未建立探勘紀錄？</span>
+          <button id="explorer-register" class="explorer-text-action" type="button">建立帳號</button>
+        </p>
+
+        <div class="explorer-divider" aria-hidden="true"><span>或</span></div>
+
+        <button id="explorer-guest-enter" class="explorer-guest-action" type="button">以訪客身分進入</button>
+        <p class="explorer-guest-note">無需建立帳號即可遊玩，部分紀錄可能不會永久保存。</p>
+        <p id="explorer-auth-status" class="explorer-auth-status" role="status" aria-live="polite"></p>
+      </div>
+    </section>
+
+    <div id="loading-overlay" class="hidden" role="status" aria-live="polite">
+      <div class="loading-panel">
+        <p id="loading-label">正在載入神殿與探險者……</p>
+        <div class="loading-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+          <div id="loading-progress"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 遊戲主頁面：素材載入完成後才顯示 -->
+    <div id="main-menu-overlay" class="main-menu-overlay" role="dialog" aria-modal="true" aria-labelledby="main-menu-title">
+      <div class="main-menu-shade" aria-hidden="true"></div>
+      <div class="main-menu-panel">
+        <div class="main-menu-brand">
+          <h1 id="main-menu-title" class="visually-hidden">太陽之心：法老王的封印</h1>
+          <img class="main-menu-title-art" src="assets/道具/主頁面按鈕/太陽之心標題.png" alt="" draggable="false">
+        </div>
+
+        <div id="main-menu-actions" class="main-menu-actions">
+          <button id="main-menu-new-game" class="main-menu-art-button primary" type="button" aria-label="開始遊戲">
+            <img src="assets/道具/主頁面按鈕/開始遊戲.png" alt="" draggable="false">
+          </button>
+          <button id="main-menu-continue" class="main-menu-art-button" type="button" aria-label="繼續遊戲">
+            <img src="assets/道具/主頁面按鈕/繼續遊戲.png" alt="" draggable="false">
+          </button>
+          <p id="main-menu-save-status" class="main-menu-save-status">正在確認存檔……</p>
+          <button id="main-menu-instructions" class="main-menu-art-button" type="button" aria-label="遊戲說明">
+            <img src="assets/道具/主頁面按鈕/遊戲說明.png" alt="" draggable="false">
+          </button>
+          <button id="main-menu-settings" class="main-menu-art-button" type="button" aria-label="設定">
+            <img src="assets/道具/主頁面按鈕/設定.png" alt="" draggable="false">
+          </button>
+        </div>
+
+        <div id="main-menu-instructions-panel" class="main-menu-subpanel hidden" aria-label="遊戲說明">
+          <h2>遊戲說明</h2>
+          <p>探索三座古墓場景，調查壁畫與遺物，解開法老留下的試煉。</p>
+          <dl class="main-menu-control-list">
+            <div><dt>A／D 或方向鍵</dt><dd>移動</dd></div>
+            <div><dt>E</dt><dd>調查與互動</dd></div>
+            <div><dt>B</dt><dd>開啟背包</dd></div>
+            <div><dt>ESC</dt><dd>跳過開場或關閉視窗</dd></div>
+          </dl>
+          <p class="main-menu-instruction-note">遊戲會在進入各場景時自動保存紀錄。</p>
+          <button id="main-menu-instructions-back" class="main-menu-button" type="button">返回</button>
+        </div>
+
+        <div id="main-menu-settings-panel" class="main-menu-subpanel main-menu-settings-panel hidden" aria-label="遊戲設定">
+          <h2>設定</h2>
+          <label class="main-menu-setting-row" for="setting-volume">
+            <span>音效音量</span>
+            <output id="setting-volume-value">80%</output>
+          </label>
+          <input id="setting-volume" type="range" min="0" max="100" step="5" value="80">
+
+          <label class="main-menu-setting-row" for="setting-text-speed">
+            <span>對話文字速度</span>
+            <select id="setting-text-speed">
+              <option value="28">慢</option>
+              <option value="42">標準</option>
+              <option value="70">快</option>
+            </select>
+          </label>
+
+          <button id="main-menu-settings-back" class="main-menu-button" type="button">返回</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 開始新遊戲後顯示的序章；不建立新 Canvas，只覆蓋既有遊戲畫面 -->
+    <section id="prologue-overlay" class="prologue-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="prologue-title" aria-hidden="true">
+      <div class="prologue-content">
+        <h2 id="prologue-title" class="prologue-title prologue-reveal">序章</h2>
+        <div class="prologue-story">
+          <p class="prologue-text prologue-reveal">
+            數千年前，法老王阿蒙拉的陵墓<br>
+            隨著王朝的覆滅，被埋藏於黃沙之下。
+          </p>
+          <p class="prologue-text prologue-reveal">
+            沒有人知道它的位置，<br>
+            也沒有任何探勘紀錄曾提及它的存在。
+          </p>
+          <p class="prologue-text prologue-until prologue-reveal">直到今日——</p>
+          <p class="prologue-text prologue-reveal">
+            考古學家亞倫・卡特在一次地下探勘中，<br>
+            意外發現了一條從未被記錄的古老通道。
+          </p>
+          <p class="prologue-text prologue-reveal">
+            在通道的盡頭，<br>
+            一座沉睡了三千年的墓室，<br>
+            正等待著第一位闖入者。
+          </p>
+        </div>
+        <button id="prologue-enter" class="prologue-enter" type="button" disabled>進入古墓</button>
+      </div>
+      <button id="prologue-skip" class="prologue-skip" type="button">跳過</button>
+    </section>
+
+    <!-- 遊戲繪圖畫布 (960x540) -->
+    <canvas id="gameCanvas" width="960" height="540"></canvas>
+
+    <!-- 玩家 DOM GIF 行走圖層 (使用走路動畫資料夾中的 0.2 倍數版本) -->
+    <img id="player-gif" src="assets/characters/aaron/走路動畫/0.2倍數.gif" class="hidden" alt="亞倫行走動畫">
+
+    <!-- 頂部 HUD 資訊 -->
+    <div id="hud-panel">
+      <button id="skip-cutscene-btn" class="indie-btn small hidden" style="background: rgba(140, 42, 27, 0.7); border-color: #ffd700;">⏭️ 跳過開場 (ESC)</button>
+      <div id="countdown-timer" class="hud-item timer hidden">⏳ 封印倒數 15:00</div>
+      <div id="test-controls" class="hud-item test-controls hidden" aria-label="計時器測試工具">
+        <span>🧪 測試</span>
+        <button id="test-30s-btn" class="indie-btn small" type="button">30 秒</button>
+        <button id="test-pause-btn" class="indie-btn small" type="button">暫停</button>
+        <button id="test-scene2-btn" class="indie-btn small" type="button">第二場景</button>
+        <button id="test-scene3-btn" class="indie-btn small" type="button">第三場景</button>
+        <button id="test-timeup-btn" class="indie-btn small" type="button">直接逾時</button>
+      </div>
+      <div class="hud-item controls">
+        <span class="key-tip">A/D 或 ◀/▶：移動</span>
+        <span class="key-tip">E：調查/互動</span>
+        <span class="key-tip">B：背包</span>
+        <button id="restart-btn" class="indie-btn small">🔄 重置</button>
+      </div>
+    </div>
+
+    <!-- 依照目前場景與解謎進度自動更新的下一步提示 -->
+    <div id="current-objective" class="hud-item current-objective hidden" role="status" aria-live="polite">
+      <span class="objective-label">目前目標</span>
+      <span id="current-objective-text"></span>
+    </div>
+
+    <!-- 第三場景臨時比例調整工具；確認完成後可移除 UI 並保留設定 -->
+    <div id="tomb-editor-toolbar" class="tomb-editor-toolbar hidden" aria-label="第三場景比例調整工具">
+      <div class="tomb-editor-heading">
+        <strong>第三場景調整</strong>
+        <button id="tomb-editor-close" class="indie-btn small" type="button">收合</button>
+      </div>
+      <label>
+        <span>背景大小 <output id="tomb-bg-scale-value">100%</output></span>
+        <input id="tomb-bg-scale" type="range" min="70" max="150" step="1" value="100">
+      </label>
+      <label>
+        <span>背景高度 <output id="tomb-bg-y-value">0</output></span>
+        <input id="tomb-bg-y" type="range" min="-220" max="220" step="2" value="0">
+      </label>
+      <label>
+        <span>人物大小 <output id="tomb-player-scale-value">100%</output></span>
+        <input id="tomb-player-scale" type="range" min="60" max="160" step="1" value="100">
+      </label>
+      <label>
+        <span>人物腳底 <output id="tomb-player-y-value">500</output></span>
+        <input id="tomb-player-y" type="range" min="430" max="530" step="1" value="500">
+      </label>
+      <div class="tomb-editor-section">
+        <strong>上一關入口石門</strong>
+        <p class="tomb-editor-hint">可直接在畫面上拖曳石門。</p>
+        <label>
+          <span>門 X <output id="tomb-door-x-value">170</output></span>
+          <input id="tomb-door-x" type="range" min="0" max="2000" step="5" value="170">
+        </label>
+        <label>
+          <span>門 Y <output id="tomb-door-y-value">390</output></span>
+          <input id="tomb-door-y" type="range" min="100" max="540" step="2" value="390">
+        </label>
+        <label>
+          <span>門寬 <output id="tomb-door-width-value">330</output></span>
+          <input id="tomb-door-width" type="range" min="120" max="700" step="5" value="330">
+        </label>
+        <label>
+          <span>門高 <output id="tomb-door-height-value">220</output></span>
+          <input id="tomb-door-height" type="range" min="100" max="500" step="5" value="220">
+        </label>
+      </div>
+      <div class="tomb-editor-section">
+        <div class="tomb-editor-heading tomb-editor-subheading">
+          <strong>第三場景火把</strong>
+          <span id="tomb-torch-status">尚未選取</span>
+        </div>
+        <p class="tomb-editor-hint">點選並拖曳畫面上的火把；可自由新增多支。</p>
+        <div class="tomb-editor-actions">
+          <button id="tomb-torch-add" class="indie-btn small" type="button">＋新增火把</button>
+          <button id="tomb-torch-delete" class="indie-btn small" type="button">刪除選取</button>
+        </div>
+        <label>
+          <span>火把 X <output id="tomb-torch-x-value">—</output></span>
+          <input id="tomb-torch-x" type="range" min="0" max="2000" step="5" value="0" disabled>
+        </label>
+        <label>
+          <span>火把 Y <output id="tomb-torch-y-value">—</output></span>
+          <input id="tomb-torch-y" type="range" min="40" max="440" step="2" value="160" disabled>
+        </label>
+        <label>
+          <span>火把大小 <output id="tomb-torch-scale-value">—</output></span>
+          <input id="tomb-torch-scale" type="range" min="40" max="220" step="5" value="100" disabled>
+        </label>
+      </div>
+      <div class="tomb-editor-section">
+        <div class="tomb-editor-heading tomb-editor-subheading">
+          <strong>三面銅鏡</strong>
+          <span id="tomb-mirror-status">尚未選取</span>
+        </div>
+        <p class="tomb-editor-hint">先選擇鏡子，再直接拖曳；底座會以 Y 數值對齊地板。</p>
+        <div class="tomb-editor-actions tomb-mirror-selector">
+          <button class="indie-btn small" type="button" data-tomb-mirror="0">鏡一</button>
+          <button class="indie-btn small" type="button" data-tomb-mirror="1">鏡二</button>
+          <button class="indie-btn small" type="button" data-tomb-mirror="2">鏡三</button>
+        </div>
+        <label>
+          <span>銅鏡 X <output id="tomb-mirror-x-value">—</output></span>
+          <input id="tomb-mirror-x" type="range" min="0" max="2000" step="5" value="0" disabled>
+        </label>
+        <label>
+          <span>底座 Y <output id="tomb-mirror-y-value">—</output></span>
+          <input id="tomb-mirror-y" type="range" min="350" max="540" step="2" value="500" disabled>
+        </label>
+        <label>
+          <span>銅鏡大小 <output id="tomb-mirror-scale-value">—</output></span>
+          <input id="tomb-mirror-scale" type="range" min="45" max="180" step="5" value="100" disabled>
+        </label>
+      </div>
+      <div class="tomb-editor-section">
+        <div class="tomb-editor-heading tomb-editor-subheading">
+          <strong>光線節點</strong>
+          <span id="tomb-beam-point-status">尚未選取</span>
+        </div>
+        <p class="tomb-editor-hint">選擇節點後，可拖曳畫面上的圓點；三面鏡子的端點會跟著銅鏡位置。</p>
+        <div class="tomb-editor-actions tomb-beam-selector">
+          <button class="indie-btn small" type="button" data-tomb-beam-point="source">光源</button>
+          <button class="indie-btn small" type="button" data-tomb-beam-point="sun">太陽柱</button>
+          <button class="indie-btn small" type="button" data-tomb-beam-point="moon">月亮柱</button>
+          <button class="indie-btn small" type="button" data-tomb-beam-point="throne">王座</button>
+        </div>
+        <label>
+          <span>節點 X <output id="tomb-beam-point-x-value">—</output></span>
+          <input id="tomb-beam-point-x" type="range" min="0" max="2000" step="2" value="0" disabled>
+        </label>
+        <label>
+          <span>節點 Y <output id="tomb-beam-point-y-value">—</output></span>
+          <input id="tomb-beam-point-y" type="range" min="0" max="540" step="2" value="0" disabled>
+        </label>
+      </div>
+      <button id="tomb-editor-reset" class="indie-btn small" type="button">重設第三場景</button>
+    </div>
+
+    <!-- 靠近物件時的 E 鍵懸浮互動提示 -->
+    <div id="interaction-prompt" class="hidden">E 調查</div>
+
+    <!-- 劇情對話面板 (古老羊皮紙獨立風格) -->
+    <div id="dialogue-panel" class="hidden">
+      <img id="dialogue-portrait" class="hidden" src="assets/characters/aaron_design.png" alt="亞倫・卡特">
+      <div class="dialogue-paper">
+        <div id="dialogue-speaker">亞倫・卡特</div>
+        <div id="dialogue-text">...</div>
+        <div class="dialogue-arrow">▼ 點擊繼續</div>
+      </div>
+    </div>
+
+    <!-- 背包系統面板 (B 開啟／關閉) -->
+    <div id="inventory-overlay" class="hidden">
+      <div class="parchment-modal">
+        <button class="close-modal-btn">✖</button>
+        <h2 class="modal-title">🧳 亞倫的探險背包</h2>
+        <p class="modal-subtitle">收集的古代遺物會存放於此</p>
+        <div id="inventory-grid">
+          <!-- 動態載入道具格 -->
+        </div>
+        <div id="item-description-box">
+          <p class="desc-title">選取道具檢視詳情</p>
+          <p class="desc-body">點擊上方道具格子讀取法老的秘密...</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- 太陽神祭壇解謎視窗 (已放上俯視祭壇.png 圖片) -->
+    <!-- 太陽神祭壇解謎視窗 (方案 1：左右兩翼環繞式 ＋ 無框純淨嵌入) -->
+    <div id="puzzle-overlay" class="hidden">
+      <div class="stone-modal topdown-puzzle-modal">
+        <div id="puzzle-rockfall-layer" aria-hidden="true"></div>
+        <button class="close-modal-btn">✖</button>
+        <h2 class="modal-title">🏺 太陽神四大祭壇機關</h2>
+        <p class="modal-subtitle">「太陽升起，聖鷹飛翔，生命甦醒，河流滋養大地。」</p>
+        <div class="puzzle-status-row">
+          <div id="puzzle-countdown-timer" class="puzzle-timer">⏳ 封印倒數 15:00</div>
+          <div id="puzzle-feedback" class="puzzle-feedback" role="status" aria-live="polite"></div>
+        </div>
+        
+        <!-- 左右兩翼環繞主體佈局 -->
+        <div class="wings-puzzle-layout">
+          <!-- 左翼石板欄 (太陽、聖鷹 - 純淨無文字) -->
+          <div class="slates-wing left-wing">
+            <div class="draggable-slate" data-slate-id="太陽" draggable="true" title="祭壇石板-太陽">
+              <img src="assets/items/slate_sun.png" class="slate-img" alt="太陽石板">
+            </div>
+            <div class="draggable-slate" data-slate-id="鷹" draggable="true" title="祭壇石板-鳥">
+              <img src="assets/items/slate_bird.png" class="slate-img" alt="聖鷹石板">
+            </div>
+          </div>
+
+          <!-- 中央俯視祭壇與 4 個直接放置凹槽 (無額外框框) -->
+          <div class="topdown-altars-wrapper">
+            <img src="assets/items/topdown_altars.png" class="topdown-altars-bg" alt="俯視祭壇">
+            
+            <!-- 祭壇圖片上方的四個純淨放置點 (Ⅰ, Ⅱ, Ⅲ, Ⅳ) -->
+            <div class="altar-slots-layer">
+              <div class="topdown-slot" data-slot="0">
+                <div class="placed-slate" id="slot-0"></div>
+              </div>
+              <div class="topdown-slot" data-slot="1">
+                <div class="placed-slate" id="slot-1"></div>
+              </div>
+              <div class="topdown-slot" data-slot="2">
+                <div class="placed-slate" id="slot-2"></div>
+              </div>
+              <div class="topdown-slot" data-slot="3">
+                <div class="placed-slate" id="slot-3"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 右翼石板欄 (生命 - 純淨無文字) -->
+          <div class="slates-wing right-wing">
+            <div class="draggable-slate" data-slate-id="生命" draggable="true" title="祭壇石板-生命">
+              <img src="assets/items/slate_life.png" class="slate-img" alt="生命石板">
+            </div>
+          </div>
+        </div>
+
+        <div style="margin-top: 12px; display: flex; justify-content: center;">
+          <button id="submit-puzzle-btn" class="indie-btn golden">✨ 啟動祭壇</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 場景二：天秤審判室機關 -->
+    <div id="scale-overlay" class="hidden">
+      <div class="stone-modal scale-modal">
+        <button class="close-modal-btn" type="button">✖</button>
+        <h2 class="modal-title">真理與心臟的審判</h2>
+        <p class="modal-subtitle">「心若重於真理，靈魂將被黑暗吞噬。」</p>
+
+        <div class="scale-status-row">
+          <div id="scale-countdown-timer" class="puzzle-timer">⏳ 封印倒數 15:00</div>
+          <div id="scale-mistakes">陷阱觸發：0 / 2</div>
+        </div>
+
+        <div class="scale-puzzle-layout" aria-label="天秤放置區">
+          <button id="scale-left-pan" class="scale-pan" type="button" data-side="left">
+            <span class="pan-label">左盤</span>
+            <span class="pan-content">點擊放置</span>
+          </button>
+          <div class="scale-pillar" aria-hidden="true">
+            <div class="scale-beam"></div>
+            <div class="scale-emblem">𓂀</div>
+          </div>
+          <button id="scale-right-pan" class="scale-pan" type="button" data-side="right">
+            <span class="pan-label">右盤</span>
+            <span class="pan-content">點擊放置</span>
+          </button>
+        </div>
+
+        <p class="scale-instruction">先選擇攜帶物，再點擊左盤或右盤；點擊盤中物品可取回。</p>
+        <div id="scale-item-pool" class="scale-item-pool" aria-label="可放置物品"></div>
+        <div id="scale-feedback" class="scale-feedback" role="status" aria-live="polite"></div>
+
+        <button id="submit-scale-btn" class="indie-btn golden" type="button">進行審判</button>
+      </div>
+    </div>
+
+    <!-- 第二場景：祭司護符取得畫面 -->
+    <div id="relic-reveal-overlay" class="hidden">
+      <div class="stone-modal relic-reveal-modal">
+        <h2 class="modal-title">發現祭司護符</h2>
+        <p class="modal-subtitle">天秤底座的暗格中，靜靜躺著守墓祭司留下的護符。</p>
+        <img id="relic-reveal-image" src="assets/道具/護符.png" alt="祭司護符">
+        <p class="relic-reveal-caption">【祭司護符】或許能保護持有者穿越法老墓室的危險。</p>
+        <button id="collect-relic-btn" class="indie-btn golden" type="button">收進背包</button>
+      </div>
+    </div>
+
+    <!-- 第三場景：太陽之心的最終選擇 -->
+    <div id="sun-heart-choice-overlay" class="hidden" role="dialog" aria-modal="true" aria-labelledby="sun-heart-choice-title">
+      <div class="sun-heart-choice-modal">
+        <div class="sun-heart-choice-heading">
+          <span class="sun-heart-choice-divider" aria-hidden="true"></span>
+          <h2 id="sun-heart-choice-title">太陽之心仍在微微跳動……</h2>
+          <p>你要將它帶離這座陵墓嗎？</p>
+        </div>
+        <div class="sun-heart-choice-actions">
+          <button id="take-sun-heart-btn" class="sun-heart-choice-tablet take-tablet" type="button">
+            <span class="tablet-symbol" aria-hidden="true">☀</span>
+            <span class="tablet-copy">
+              <strong>取走太陽之心</strong>
+              <small>將它帶離陵墓</small>
+            </span>
+          </button>
+          <button id="leave-sun-heart-btn" class="sun-heart-choice-tablet leave-tablet" type="button">
+            <span class="tablet-symbol" aria-hidden="true">𓂀</span>
+            <span class="tablet-copy">
+              <strong>留下太陽之心</strong>
+              <small>讓它繼續留在原處</small>
+            </span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 第三場景：完成結局 -->
+    <div id="tomb-ending-overlay" class="hidden" role="dialog" aria-modal="true" aria-labelledby="tomb-ending-title">
+      <div class="tomb-ending-content">
+        <p id="tomb-ending-kicker" class="ending-kicker ending-scene-reveal">終章</p>
+        <h2 id="tomb-ending-title" class="modal-title ending-scene-title">TRUE END：歷史的守護者</h2>
+        <div id="tomb-ending-story" class="tomb-ending-story" aria-live="polite"></div>
+        <div class="tomb-ending-actions ending-scene-reveal">
+          <button id="tomb-ending-checkpoint-btn" class="ending-text-button hidden" type="button">回到最近紀錄</button>
+        </div>
+      </div>
+      <button id="tomb-ending-skip-btn" class="tomb-ending-skip" type="button">略過動畫</button>
+    </div>
+
+    <!-- 死亡結局與最近場景回檔 -->
+    <div id="death-overlay" class="hidden" role="dialog" aria-modal="true" aria-labelledby="death-title">
+      <div class="stone-modal death-modal">
+        <p class="death-kicker">古墓的封印已經落下</p>
+        <h2 id="death-title" class="modal-title">BAD END：未通過的審判</h2>
+        <p id="death-reason" class="death-reason">古墓的封印已經完全閉合。</p>
+        <p id="death-record" class="death-record">目前沒有可以返回的紀錄。</p>
+        <div class="death-actions">
+          <button id="continue-checkpoint-btn" class="indie-btn golden" type="button">從最近紀錄繼續</button>
+          <button id="death-restart-btn" class="indie-btn" type="button">重新開始</button>
+          <button id="ending-conditions-btn" class="indie-btn" type="button">查看結局條件</button>
+        </div>
+        <div id="ending-conditions" class="ending-conditions hidden">
+          <p>天秤錯誤操作累積兩次，會進入審判失敗。</p>
+          <p>封印倒數歸零，也會進入審判失敗。</p>
+          <p>回檔會返回目前場景入口，恢復當時的時間、背包與解謎進度。</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- 開場黑幕過渡 -->
+    <div id="screen-fade" class="fade-out"></div>
+  </div>
+
+  <script src="js/preload.js"></script>
+  <script src="js/scene.js"></script>
+  <script src="js/player.js"></script>
+  <script src="js/interaction.js"></script>
+  <script src="js/judgement.js"></script>
+  <script src="js/tomb.js"></script>
+  <script src="js/checkpoint.js"></script>
+  <script src="js/objective.js"></script>
+  <script src="js/main-menu.js"></script>
+  <script src="js/prologue.js"></script>
+  <script src="js/login-gate.js"></script>
+  <script src="js/puzzle.js"></script>
+  <script type="module" src="/js/backend-bootstrap.js"></script>
+</body>
+</html>
